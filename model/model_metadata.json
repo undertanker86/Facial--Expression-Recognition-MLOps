@@ -1,0 +1,16 @@
+{
+  "model_path": "model/best_model_now.pth",
+  "version": "1.0.0",
+  "description": "Initial model - EfficientFace architecture for FER",
+  "updated_at": "2024-01-15T10:00:00",
+  "file_size": 0,
+  "checksum": "",
+  "training_data_version": "v1.0.0-2024-01-15",
+  "architecture": "EfficientFace",
+  "num_classes": 7,
+  "performance_metrics": {
+    "accuracy": 0.0,
+    "loss": 0.0,
+    "f1_score": 0.0
+  }
+}
