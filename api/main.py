@@ -20,7 +20,9 @@ from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExpo
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
-from src.efficientfacenet import efficient_face
+# CHANGED: Switch from EfficientFaceNet to MobileFaceNet for 7-class prediction
+from src.mobilefacenet import MobileFaceNet  # was: from src.efficientfacenet import efficient_face
+import torch.nn as nn  # added for head replacement
 
 # Force CPU device
 DEVICE = torch.device("cpu")
@@ -28,7 +30,7 @@ DEVICE = torch.device("cpu")
 # Initialize FastAPI app
 app = FastAPI(
     title="FER API - Facial Expression Recognition",
-    description="API for emotion detection using EfficientFace model",
+    description="API for emotion detection using MobileFaceNet model",  # CHANGED description (touch to trigger CI/CD)
     version="1.0.0"
 )
 
@@ -123,7 +125,7 @@ EMOTION_MAPPING = {
 model = None
 
 def load_model():
-    """Load the trained EfficientFace model"""
+    """Load the trained MobileFaceNet model (7 classes)."""  # CHANGED docstring
     global model
     start_time = time.time()
     
@@ -132,12 +134,21 @@ def load_model():
             span.set_attribute("model.path", os.getenv('MODEL_PATH', '/app/model/best_model_now.pth'))
             span.set_attribute("device", str(DEVICE))
             
-            model = efficient_face()
-            model_path = os.getenv('MODEL_PATH', '/app/model/best_model_now.pth')
+            # CHANGED: build MobileFaceNet backbone and 7-class head
+            num_classes = 7
+            backbone = MobileFaceNet(input_size=[112, 112], embedding_size=136, output_name="GDC")
+            # Replace classification head to 7 classes
+            backbone.output_layer.linear = nn.Linear(in_features=512, out_features=num_classes, bias=False)
+            backbone.output_layer.bn = nn.BatchNorm1d(num_classes)
+            model = backbone
+            model_path = os.getenv('MODEL_PATH', '/app/model/best_model_now.pth')  # keep same env/path
             
             if os.path.exists(model_path):
                 state = torch.load(model_path, map_location=DEVICE)
-                model.load_state_dict(state)
+                # allow loading either flat state_dict or wrapped
+                if isinstance(state, dict) and 'state_dict' in state:
+                    state = state['state_dict']
+                model.load_state_dict(state, strict=False)  # CHANGED: strict=False for compatibility
                 span.set_attribute("model.loaded", True)
             else:
                 span.set_attribute("model.loaded", False)
@@ -165,7 +176,7 @@ def load_model():
             return False
     
 def preprocess_image(image_bytes: bytes) -> torch.Tensor:
-    """Preprocess image for model inference"""
+    """Preprocess image for model inference (MobileFaceNet expects 112x112)."""  # CHANGED comment
     with tracer.start_as_current_span("preprocess_image") as span:
         try:
             span.set_attribute("image.size_bytes", len(image_bytes))
@@ -177,9 +188,9 @@ def preprocess_image(image_bytes: bytes) -> torch.Tensor:
             if image.mode != 'RGB':
                 image = image.convert('RGB')
             
-            # Resize to expected input size
-            image = image.resize((224, 224))
-            span.set_attribute("image.resized_dimensions", "224x224")
+            # CHANGED: Resize to 112x112 for MobileFaceNet
+            image = image.resize((112, 112))
+            span.set_attribute("image.resized_dimensions", "112x112")
             
             # Convert to numpy array and normalize
             image_array = np.array(image).astype(np.float32) / 255.0
@@ -362,7 +373,7 @@ async def model_info():
         REQUEST_LATENCY.labels(method="GET", endpoint="/model-info").observe(time.time() - start_time)
         
         return {
-            "model_type": "EfficientFace",
+            "model_type": "MobileFaceNet",  # CHANGED
             "num_classes": 7,
             "emotions": list(EMOTION_MAPPING.values()),
             "model_parameters": model_params
