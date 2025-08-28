@@ -57,11 +57,44 @@ kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/
 ```
 
-4. **Setup Jenkins**
-- Create Jenkins job with this repository
-- Configure webhook from GitHub
-- Setup Docker Hub credentials
-- Setup Kubernetes context
+4. **Setup Jenkins (Automated)**
+```bash
+# Make script executable
+chmod +x scripts/setup-jenkins.sh
+
+# Run setup (update JENKINS_URL, USER, PASS as needed)
+export JENKINS_URL="http://your-jenkins-url:8080"
+export JENKINS_USER="your-username"
+export JENKINS_PASS="your-password"
+./scripts/setup-jenkins.sh
+```
+
+5. **Test CI/CD Pipeline**
+```bash
+# Make script executable
+chmod +x scripts/test-cicd.sh
+
+# Run tests
+./scripts/test-cicd.sh
+```
+
+### Manual Jenkins Setup
+
+If automated setup fails, manually create Jenkins job:
+
+1. **Create Pipeline Job**
+   - Name: `fer-emotion-recognition`
+   - Type: Pipeline
+   - Repository: `https://github.com/undertanker86/Facial--Expression-Recognition-MLOps.git`
+   - Script Path: `Jenkinsfile`
+
+2. **Setup Credentials**
+   - `dockerhub-credentials`: Docker Hub username/password
+   - `github-credentials`: GitHub personal access token
+
+3. **Setup Webhook**
+   - URL: `http://jenkins-url/github-webhook/`
+   - Events: Push events only
 
 ## 🚀 CI/CD Pipeline
 
