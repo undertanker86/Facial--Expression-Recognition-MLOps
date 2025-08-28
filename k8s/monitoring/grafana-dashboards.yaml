@@ -1,0 +1,255 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: fer-project
+  labels:
+    app: grafana
+data:
+  dashboard-provider.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards/default
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-fer-service
+  namespace: fer-project
+  labels:
+    app: grafana
+data:
+  fer-service-dashboard.json: |
+    {
+      "id": null,
+      "title": "FER Service Dashboard",
+      "tags": ["fer", "service"],
+      "timezone": "browser",
+      "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(fer_api_requests_total[5m])",
+                "legendFormat": "{{method}} {{endpoint}} - {{status}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Response Time (95th percentile)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(fer_api_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(fer_api_requests_total{status=~\"5..\"}[5m])",
+                "legendFormat": "5xx errors"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "process_virtual_memory_bytes{job=\"fer-service\"}",
+                "legendFormat": "Virtual Memory"
+              },
+              {
+                "expr": "container_memory_usage_bytes{pod=~\"fer-service.*\"}",
+                "legendFormat": "Container Memory - {{pod}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Model Inference Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(fer_model_inference_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "Prediction Count by Emotion",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(fer_api_predictions_total[5m])",
+                "legendFormat": "{{emotion}} - {{status}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          },
+          {
+            "id": 7,
+            "title": "Active Requests",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "fer_active_requests",
+                "legendFormat": "Active Requests"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 0, "y": 24}
+          },
+          {
+            "id": 8,
+            "title": "Model Parameters",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "fer_model_parameters_total",
+                "legendFormat": "Total Parameters"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 6, "y": 24}
+          },
+          {
+            "id": 9,
+            "title": "Model Confidence Scores",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(fer_model_confidence_score_bucket[5m]))",
+                "legendFormat": "95th percentile - {{emotion}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+          }
+        ],
+      "time": {"from": "now-1h", "to": "now"},
+      "refresh": "5s"
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-kubernetes
+  namespace: fer-project
+  labels:
+    app: grafana
+data:
+  kubernetes-dashboard.json: |
+    {
+      "id": null,
+      "title": "Kubernetes Cluster Overview",
+      "tags": ["kubernetes", "cluster"],
+      "timezone": "browser",
+      "panels": [
+          {
+            "id": 1,
+            "title": "Pod Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "count(kube_pod_status_phase)",
+                "legendFormat": "Total Pods"
+              },
+              {
+                "expr": "count(kube_pod_status_phase{phase=\"Running\"})",
+                "legendFormat": "Running Pods"
+              },
+              {
+                "expr": "count(kube_pod_status_phase{phase=\"Pending\"})",
+                "legendFormat": "Pending Pods"
+              },
+              {
+                "expr": "count(kube_pod_status_phase{phase=\"Failed\"})",
+                "legendFormat": "Failed Pods"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+                "legendFormat": "CPU Usage % - {{instance}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+          },
+          {
+            "id": 3,
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "100 - ((node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100)",
+                "legendFormat": "Memory Usage % - {{instance}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+          },
+          {
+            "id": 4,
+            "title": "Container Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes",
+                "legendFormat": "{{pod}} - {{container}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+          },
+          {
+            "id": 5,
+            "title": "Service Health",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "up{job=\"fer-service\"}",
+                "legendFormat": "FER Service"
+              },
+              {
+                "expr": "up{job=\"jaeger\"}",
+                "legendFormat": "Jaeger"
+              },
+              {
+                "expr": "up{job=\"prometheus\"}",
+                "legendFormat": "Prometheus"
+              },
+              {
+                "expr": "up{job=\"grafana\"}",
+                "legendFormat": "Grafana"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 24, "x": 0, "y": 20}
+          }
+        ],
+      "time": {"from": "now-1h", "to": "now"},
+      "refresh": "5s"
+    }

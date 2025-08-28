@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+
+# Data and models (optional: keep model if you must bake it)
+/data/
+**/*.npz
+model/outputs/
+
+# Tests and docs
+/tests/
+README.md
+DEPLOYMENT_SUMMARY.md
+
+# Node/binaries/cache
+node_modules/
+*.log
+*.tmp
+.cache/
+
+# Docker and CI
+Dockerfile*
+Jenkinsfile

@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fer-service
+  namespace: fer-project
+  labels:
+    app: fer-service
+    version: v1.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fer-service
+  template:
+    metadata:
+      labels:
+        app: fer-service
+        version: v1.0.0
+    spec:
+      containers:
+      - name: fer-service
+        image: undertanker86/fer-service:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: fer-config
+              key: LOG_LEVEL
+        - name: MODEL_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: fer-config
+              key: MODEL_PATH
+        - name: JAEGER_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: fer-config
+              key: JAEGER_HOST
+        - name: JAEGER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: fer-config
+              key: JAEGER_PORT
+        - name: OTEL_SERVICE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: fer-config
+              key: OTEL_SERVICE_NAME
+        - name: OTEL_SERVICE_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: fer-config
+              key: OTEL_SERVICE_VERSION
+        - name: OTEL_DEPLOYMENT_ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: fer-config
+              key: OTEL_DEPLOYMENT_ENVIRONMENT
+        - name: OTEL_TRACES_SAMPLER
+          valueFrom:
+            configMapKeyRef:
+              name: fer-config
+              key: OTEL_TRACES_SAMPLER
+        - name: OTEL_METRICS_EXPORTER
+          valueFrom:
+            configMapKeyRef:
+              name: fer-config
+              key: OTEL_METRICS_EXPORTER
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: fer-config
+              key: OTEL_EXPORTER_OTLP_ENDPOINT
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+

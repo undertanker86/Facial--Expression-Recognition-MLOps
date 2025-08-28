@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: fer-project
+data:
+  rules.yaml: |
+    groups:
+    - name: fer-service
+      rules:
+      - alert: FERServiceHighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "FER Service high error rate"
+          description: "FER Service is returning high error rate: {{ $value }}"
+      
+      - alert: FERServiceHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "FER Service high response time"
+          description: "FER Service 95th percentile response time is high: {{ $value }}s"
+      
+      - alert: FERServiceDown
+        expr: up{job="fer-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "FER Service is down"
+          description: "FER Service has been down for more than 1 minute"
+    
+    - name: kubernetes
+      rules:
+      - alert: NodeHighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node high CPU usage"
+          description: "Node {{ $labels.instance }} has high CPU usage: {{ $value }}%"
+      
+      - alert: NodeHighMemoryUsage
+        expr: 100 - ((node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node high memory usage"
+          description: "Node {{ $labels.instance }} has high memory usage: {{ $value }}%"
+      
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) * 60 > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pod is crash looping"
+          description: "Pod {{ $labels.pod }} is restarting {{ $value }} times / 5 minutes"
+    
+    - name: prometheus
+      rules:
+      - alert: PrometheusHighMemoryUsage
+        expr: (process_resident_memory_bytes / container_memory_usage_bytes) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus high memory usage"
+          description: "Prometheus is using {{ $value }}% of available memory"

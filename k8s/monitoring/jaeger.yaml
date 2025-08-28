@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: fer-project
+  labels:
+    app: jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+      - name: jaeger
+        image: jaegertracing/all-in-one:latest
+        ports:
+        - containerPort: 16686
+          name: http-query
+        - containerPort: 14268
+          name: http-collector
+        - containerPort: 4318
+          name: http-otlp
+        - containerPort: 14269
+          name: admin-metrics
+        - containerPort: 6831
+          name: udp-agent
+        env:
+        - name: COLLECTOR_OTLP_ENABLED
+          value: "true"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: fer-project
+  labels:
+    app: jaeger
+spec:
+  selector:
+    app: jaeger
+  ports:
+  - name: http-query
+    port: 16686
+    targetPort: 16686
+    protocol: TCP
+  - name: http-collector
+    port: 14268
+    targetPort: 14268
+    protocol: TCP
+  - name: http-otlp
+    port: 4318
+    targetPort: 4318
+    protocol: TCP
+  - name: admin-metrics
+    port: 14269
+    targetPort: 14269
+    protocol: TCP
+  - name: udp-agent
+    port: 6831
+    targetPort: 6831
+    protocol: UDP
+  type: ClusterIP
