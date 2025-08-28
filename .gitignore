@@ -29,7 +29,7 @@ MANIFEST
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+#  before PyInstaller creates the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
 
@@ -128,7 +128,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Model weights (không commit lên git)
+# Large model files
 *.pth
 *.pt
 *.h5
@@ -138,20 +138,21 @@ dmypy.json
 *.tar
 *.rar
 
-# Nhưng giữ metadata
-!model/model_metadata.json
-
-# Large model files
+# Specific model files
 model/Pretrained_EfficientFace.tar
 model/models.rar
 model/best_model_now.pth
 model/outputs/
+
+# Documentation files (don't track until project is complete)
+*.md
 
 # IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS files
 .DS_Store
@@ -162,5 +163,6 @@ Thumbs.db
 logs/
 
 # Temporary files
+tmp/
+temp/
 *.tmp
-*.temp
