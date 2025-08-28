@@ -135,9 +135,17 @@ dmypy.json
 *.pkl
 *.onnx
 *.tflite
+*.tar
+*.rar
 
 # Nhưng giữ metadata
 !model/model_metadata.json
+
+# Large model files
+model/Pretrained_EfficientFace.tar
+model/models.rar
+model/best_model_now.pth
+model/outputs/
 
 # IDE files
 .vscode/
