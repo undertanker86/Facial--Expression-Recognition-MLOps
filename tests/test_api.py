@@ -1,8 +1,13 @@
 import pytest
 import io
+import os
 from PIL import Image
 import numpy as np
 from fastapi.testclient import TestClient
+
+# Allow tests to run without real model weights
+os.environ.setdefault('SKIP_MODEL_LOAD_FOR_TEST', '1')
+
 from api.main import app
 
 client = TestClient(app)

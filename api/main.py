@@ -7,6 +7,7 @@ import cv2
 from PIL import Image
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 from fastapi import FastAPI, File, UploadFile, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -124,6 +125,16 @@ EMOTION_MAPPING = {
 # Global model variable
 model = None
 
+# Allow tests to bypass hard failure on missing weights
+_SKIP_MODEL_LOAD_FOR_TEST = os.getenv('SKIP_MODEL_LOAD_FOR_TEST', '0') in ('1', 'true', 'True', 'YES', 'yes')
+
+class _DummyModel(nn.Module):
+    def __init__(self, num_classes: int = 7):
+        super().__init__()
+        self.num_classes = num_classes
+    def forward(self, x):  # x: [B, C, H, W]
+        return torch.zeros((x.shape[0], self.num_classes), dtype=torch.float32)
+
 def load_model():
     """Load the trained MobileFaceNet model (7 classes)."""  # CHANGED docstring
     global model
@@ -210,9 +221,17 @@ def preprocess_image(image_bytes: bytes) -> torch.Tensor:
 async def startup_event():
     """Initialize model on startup"""
     with tracer.start_as_current_span("startup") as span:
-        if not load_model():
-            span.set_attribute("startup.success", False)
-            raise RuntimeError("Failed to load model")
+        if _SKIP_MODEL_LOAD_FOR_TEST:
+            # Do not fail pipeline tests if weights are missing
+            global model
+            model = _DummyModel().to(DEVICE).eval()
+            span.set_attribute("startup.success", True)
+            span.set_attribute("startup.mode", "dummy")
+        else:
+            if not load_model():
+                span.set_attribute("startup.success", False)
+                raise RuntimeError("Failed to load model")
+            span.set_attribute("startup.mode", "real")
         span.set_attribute("startup.success", True)
 
 @app.get("/")
