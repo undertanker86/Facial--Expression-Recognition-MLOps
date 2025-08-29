@@ -85,13 +85,12 @@ pipeline {
             when { changeset 'api/main.py' }
             steps {
                 script {
-                    echo "🐳 Building Docker image on host machine..."
-                    echo "📋 Run these commands on your host machine:"
-                    echo "   docker system prune -f"
-                    echo "   docker build --no-cache -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
-                    echo "   docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
-                    echo "   docker images | grep fer-service"
-                    echo "✅ Docker build instructions provided"
+                    echo "🐳 Building Docker image using host Docker daemon..."
+                    sh 'docker exec jenkins-new docker system prune -f || true'
+                    sh "docker exec jenkins-new docker build --no-cache -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                    sh "docker exec jenkins-new docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+                    sh 'docker exec jenkins-new docker images | grep fer-service || true'
+                    echo "✅ Docker image built successfully using host Docker"
                 }
             }
         }
@@ -100,44 +99,75 @@ pipeline {
             when { changeset 'api/main.py' }
             steps {
                 script {
-                    echo "📤 Pushing to Docker Hub from host machine..."
-                    echo "📋 Run these commands on your host machine:"
-                    echo "   docker login -u YOUR_USERNAME -p YOUR_PASSWORD"
-                    echo "   docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                    echo "   docker push ${DOCKER_IMAGE}:latest"
-                    echo "✅ Docker push instructions provided"
+                    echo "📤 Pushing to Docker Hub using host Docker daemon..."
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh 'echo $DOCKER_PASSWORD | docker exec jenkins-new docker login -u $DOCKER_USERNAME --password-stdin'
+                        sh "docker exec jenkins-new docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                        sh "docker exec jenkins-new docker push ${DOCKER_IMAGE}:latest"
+                    }
+                    echo "✅ Docker image pushed successfully using host Docker"
                 }
             }
         }
 
-        stage('Show Host kubectl Commands') {
+        stage('Deploy to Test Namespace') {
+            when { changeset 'api/main.py' }
             steps {
                 script {
-                    echo "☸️ As requested, kubectl will run on HOST (not Jenkins)."
-                    echo "💡 Run these commands on your host to deploy and verify:"
-                    sh '''
-                        cat <<CMD
-# ---------- Deploy to test ----------
-kubectl create ns ${TEST_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -f k8s/ -n ${TEST_NAMESPACE}
-kubectl set image deployment/fer-service fer-service=${DOCKER_IMAGE}:${DOCKER_TAG} -n ${TEST_NAMESPACE}
-kubectl rollout status deployment/fer-service -n ${TEST_NAMESPACE} --timeout=300s
-kubectl wait --for=condition=ready pod -l app=fer-service -n ${TEST_NAMESPACE} --timeout=300s
-kubectl run curl --image=curlimages/curl -i --rm --restart=Never -n ${TEST_NAMESPACE} -- \
-  curl -sf http://fer-service.${TEST_NAMESPACE}.svc.cluster.local:${API_PORT}/health
+                    echo "☸️ Deploying to test namespace using host kubectl..."
+                    sh "docker exec jenkins-new kubectl create ns ${TEST_NAMESPACE} --dry-run=client -o yaml | docker exec jenkins-new kubectl apply -f -"
+                    sh "docker exec jenkins-new kubectl apply -f k8s/ -n ${TEST_NAMESPACE}"
+                    sh "docker exec jenkins-new kubectl set image deployment/fer-service fer-service=${DOCKER_IMAGE}:${DOCKER_TAG} -n ${TEST_NAMESPACE}"
+                    echo "✅ Test deployment completed using host kubectl"
+                }
+            }
+        }
 
-# ---------- Promote to production ----------
-kubectl apply -f k8s/ -n ${NAMESPACE}
-kubectl set image deployment/fer-service fer-service=${DOCKER_IMAGE}:${DOCKER_TAG} -n ${NAMESPACE}
-kubectl rollout status deployment/fer-service -n ${NAMESPACE} --timeout=300s
-kubectl wait --for=condition=ready pod -l app=fer-service -n ${NAMESPACE} --timeout=300s
-kubectl run curl --image=curlimages/curl -i --rm --restart=Never -n ${NAMESPACE} -- \
-  curl -sf http://fer-service.${NAMESPACE}.svc.cluster.local:${API_PORT}/health
+        stage('Test on Kubernetes') {
+            when { changeset 'api/main.py' }
+            steps {
+                script {
+                    echo "🧪 Testing deployment on Kubernetes..."
+                    sh "docker exec jenkins-new kubectl rollout status deployment/fer-service -n ${TEST_NAMESPACE} --timeout=300s"
+                    sh "docker exec jenkins-new kubectl wait --for=condition=ready pod -l app=fer-service -n ${TEST_NAMESPACE} --timeout=300s"
+                    sh "docker exec jenkins-new kubectl run curl --image=curlimages/curl -i --rm --restart=Never -n ${TEST_NAMESPACE} -- curl -sf http://fer-service.${TEST_NAMESPACE}.svc.cluster.local:${API_PORT}/health"
+                    echo "✅ Kubernetes testing completed"
+                }
+            }
+        }
 
-# ---------- Cleanup test ----------
-kubectl delete ns ${TEST_NAMESPACE} --ignore-not-found=true
-CMD
-                    '''
+        stage('Deploy to Production') {
+            when { changeset 'api/main.py' }
+            steps {
+                script {
+                    echo "🚀 Deploying to production namespace..."
+                    sh "docker exec jenkins-new kubectl apply -f k8s/ -n ${NAMESPACE}"
+                    sh "docker exec jenkins-new kubectl set image deployment/fer-service fer-service=${DOCKER_IMAGE}:${DOCKER_TAG} -n ${NAMESPACE}"
+                    echo "✅ Production deployment completed"
+                }
+            }
+        }
+
+        stage('Verify Production') {
+            when { changeset 'api/main.py' }
+            steps {
+                script {
+                    echo "🔍 Verifying production deployment..."
+                    sh "docker exec jenkins-new kubectl rollout status deployment/fer-service -n ${NAMESPACE} --timeout=300s"
+                    sh "docker exec jenkins-new kubectl wait --for=condition=ready pod -l app=fer-service -n ${NAMESPACE} --timeout=300s"
+                    sh "docker exec jenkins-new kubectl run curl --image=curlimages/curl -i --rm --restart=Never -n ${NAMESPACE} -- curl -sf http://fer-service.${NAMESPACE}.svc.cluster.local:${API_PORT}/health"
+                    echo "✅ Production verification completed"
+                }
+            }
+        }
+
+        stage('Cleanup Test Environment') {
+            when { changeset 'api/main.py' }
+            steps {
+                script {
+                    echo "🧹 Cleaning up test environment..."
+                    sh "docker exec jenkins-new kubectl delete ns ${TEST_NAMESPACE} --ignore-not-found=true"
+                    echo "✅ Test environment cleanup completed"
                 }
             }
         }
@@ -168,8 +198,9 @@ CMD
         }
         cleanup {
             script {
-                echo "🧹 Cleanup completed"
-                echo "💡 Remember to run 'docker system prune -f' on your host if needed"
+                echo "🧹 Running cleanup using host Docker..."
+                sh 'docker exec jenkins-new docker system prune -f || true'
+                echo "✅ Cleanup completed using host Docker"
             }
         }
     }
