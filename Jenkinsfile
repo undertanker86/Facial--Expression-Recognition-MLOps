@@ -40,8 +40,8 @@ pipeline {
             steps {
                 script {
                     echo "📦 Installing Python dependencies..."
-                    sh 'pip install -r requirements.txt || true'
-                    sh 'pip install pytest pytest-cov requests || true'
+                    sh 'python3 -m pip install -r requirements.txt || true'
+                    sh 'python3 -m pip install pytest pytest-cov requests || true'
                     echo "✅ Dependencies installed successfully"
                 }
             }
@@ -55,19 +55,16 @@ pipeline {
                 script {
                     echo "🧪 Starting local API testing..."
                     
-                    // Start API service in background
                     sh '''
                         echo "🚀 Starting API service on port ${API_PORT}..."
                         cd api
-                        python main.py &
+                        python3 main.py &
                         API_PID=$!
                         echo "API PID: $API_PID"
                         
-                        // Wait for service to start
                         echo "⏳ Waiting for API service to start..."
                         sleep 10
                         
-                        // Test health endpoint
                         echo "🏥 Testing health endpoint..."
                         for i in {1..30}; do
                             if curl -f http://localhost:${API_PORT}/health > /dev/null 2>&1; then
@@ -78,12 +75,10 @@ pipeline {
                             sleep 2
                         done
                         
-                        // Run API tests
                         echo "🧪 Running API tests..."
                         cd ../tests
-                        python -m pytest test_api.py -v --maxfail=1 || true
+                        python3 -m pytest test_api.py -v --maxfail=1 || true
                         
-                        // Stop API service
                         echo "🛑 Stopping API service..."
                         kill $API_PID || true
                         sleep 2
@@ -102,14 +97,11 @@ pipeline {
                 script {
                     echo "🐳 Building Docker image..."
                     
-                    // Clean up Docker system
                     sh 'docker system prune -f || true'
                     
-                    // Build new image
                     sh "docker build --no-cache -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
                     sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
                     
-                    // Show built images
                     sh 'docker images | grep fer-service || true'
                     
                     echo "✅ Docker image built successfully"
@@ -144,25 +136,20 @@ pipeline {
                 script {
                     echo "☸️ Deploying to test namespace: ${TEST_NAMESPACE}"
                     
-                    // Create test namespace if it doesn't exist
                     sh '''
                         echo "📁 Creating test namespace if not exists..."
                         kubectl create namespace ${TEST_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
                     '''
                     
-                    // Deploy to test namespace
                     sh '''
                         echo "🚀 Deploying to test namespace..."
                         kubectl apply -f k8s/ -n ${TEST_NAMESPACE}
                         
-                        // Update deployment with new image
                         kubectl set image deployment/fer-service fer-service=${DOCKER_IMAGE}:${DOCKER_TAG} -n ${TEST_NAMESPACE}
                         
-                        // Wait for rollout
                         echo "⏳ Waiting for deployment rollout..."
                         kubectl rollout status deployment/fer-service -n ${TEST_NAMESPACE} --timeout=300s
                         
-                        // Check service status
                         echo "🔍 Checking service status..."
                         kubectl get pods -n ${TEST_NAMESPACE}
                         kubectl get svc -n ${TEST_NAMESPACE}
@@ -185,7 +172,6 @@ pipeline {
                         echo "⏳ Waiting for pods to be ready..."
                         kubectl wait --for=condition=ready pod -l app=fer-service -n ${TEST_NAMESPACE} --timeout=300s
                         
-                        // Get service URL
                         SERVICE_IP=$(kubectl get svc fer-service -n ${TEST_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
                         if [ -z "$SERVICE_IP" ]; then
                             SERVICE_IP=$(kubectl get svc fer-service -n ${TEST_NAMESPACE} -o jsonpath='{.spec.clusterIP}')
@@ -195,11 +181,9 @@ pipeline {
                         
                         echo "🔗 Service URL: http://$SERVICE_IP:$SERVICE_PORT"
                         
-                        // Test health endpoint
                         echo "🏥 Testing health endpoint on K8s..."
                         kubectl run test-curl --image=curlimages/curl -i --rm --restart=Never -- curl -f http://fer-service.${TEST_NAMESPACE}.svc.cluster.local:${SERVICE_PORT}/health || true
                         
-                        // Run additional tests if needed
                         echo "🧪 Running additional tests..."
                         kubectl run test-curl --image=curlimages/curl -i --rm --restart=Never -- curl -f http://fer-service.${TEST_NAMESPACE}.svc.cluster.local:${SERVICE_PORT}/ || true
                     '''
@@ -217,25 +201,20 @@ pipeline {
                 script {
                     echo "🚀 Deploying to production namespace: ${NAMESPACE}"
                     
-                    // Create production namespace if it doesn't exist
                     sh '''
                         echo "📁 Creating production namespace if not exists..."
                         kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
                     '''
                     
-                    // Deploy to production
                     sh '''
                         echo "🚀 Deploying to production..."
                         kubectl apply -f k8s/ -n ${NAMESPACE}
                         
-                        // Update deployment with new image
                         kubectl set image deployment/fer-service fer-service=${DOCKER_IMAGE}:${DOCKER_TAG} -n ${NAMESPACE}
                         
-                        // Wait for rollout
                         echo "⏳ Waiting for production deployment rollout..."
                         kubectl rollout status deployment/fer-service -n ${NAMESPACE} --timeout=300s
                         
-                        // Check production status
                         echo "🔍 Checking production status..."
                         kubectl get pods -n ${NAMESPACE}
                         kubectl get svc -n ${NAMESPACE}
@@ -258,11 +237,9 @@ pipeline {
                         echo "⏳ Waiting for production pods to be ready..."
                         kubectl wait --for=condition=ready pod -l app=fer-service -n ${NAMESPACE} --timeout=300s
                         
-                        // Test production service
                         echo "🧪 Testing production service..."
                         kubectl run test-curl --image=curlimages/curl -i --rm --restart=Never -- curl -f http://fer-service.${NAMESPACE}.svc.cluster.local:8000/health || true
                         
-                        // Show final status
                         echo "📊 Final production status:"
                         kubectl get all -n ${NAMESPACE}
                     '''
