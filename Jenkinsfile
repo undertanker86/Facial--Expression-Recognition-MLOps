@@ -86,10 +86,10 @@ pipeline {
             steps {
                 script {
                     echo "🐳 Building Docker image using host Docker daemon..."
-                    sh 'docker exec jenkins-new docker system prune -f || true'
-                    sh "docker exec jenkins-new docker build --no-cache -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
-                    sh "docker exec jenkins-new docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
-                    sh 'docker exec jenkins-new docker images | grep fer-service || true'
+                    sh 'docker system prune -f || true'
+                    sh "docker build --no-cache -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                    sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+                    sh 'docker images | grep fer-service || true'
                     echo "✅ Docker image built successfully using host Docker"
                 }
             }
@@ -101,9 +101,9 @@ pipeline {
                 script {
                     echo "📤 Pushing to Docker Hub using host Docker daemon..."
                     withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        sh 'echo $DOCKER_PASSWORD | docker exec jenkins-new docker login -u $DOCKER_USERNAME --password-stdin'
-                        sh "docker exec jenkins-new docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                        sh "docker exec jenkins-new docker push ${DOCKER_IMAGE}:latest"
+                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                        sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                        sh "docker push ${DOCKER_IMAGE}:latest"
                     }
                     echo "✅ Docker image pushed successfully using host Docker"
                 }
@@ -115,9 +115,9 @@ pipeline {
             steps {
                 script {
                     echo "☸️ Deploying to test namespace using host kubectl..."
-                    sh "docker exec jenkins-new kubectl create ns ${TEST_NAMESPACE} --dry-run=client -o yaml | docker exec jenkins-new kubectl apply -f -"
-                    sh "docker exec jenkins-new kubectl apply -f k8s/ -n ${TEST_NAMESPACE}"
-                    sh "docker exec jenkins-new kubectl set image deployment/fer-service fer-service=${DOCKER_IMAGE}:${DOCKER_TAG} -n ${TEST_NAMESPACE}"
+                    sh "kubectl create ns ${TEST_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
+                    sh "kubectl apply -f k8s/ -n ${TEST_NAMESPACE}"
+                    sh "kubectl set image deployment/fer-service fer-service=${DOCKER_IMAGE}:${DOCKER_TAG} -n ${TEST_NAMESPACE}"
                     echo "✅ Test deployment completed using host kubectl"
                 }
             }
@@ -128,9 +128,9 @@ pipeline {
             steps {
                 script {
                     echo "🧪 Testing deployment on Kubernetes..."
-                    sh "docker exec jenkins-new kubectl rollout status deployment/fer-service -n ${TEST_NAMESPACE} --timeout=300s"
-                    sh "docker exec jenkins-new kubectl wait --for=condition=ready pod -l app=fer-service -n ${TEST_NAMESPACE} --timeout=300s"
-                    sh "docker exec jenkins-new kubectl run curl --image=curlimages/curl -i --rm --restart=Never -n ${TEST_NAMESPACE} -- curl -sf http://fer-service.${TEST_NAMESPACE}.svc.cluster.local:${API_PORT}/health"
+                    sh "kubectl rollout status deployment/fer-service -n ${TEST_NAMESPACE} --timeout=300s"
+                    sh "kubectl wait --for=condition=ready pod -l app=fer-service -n ${TEST_NAMESPACE} --timeout=300s"
+                    sh "kubectl run curl --image=curlimages/curl -i --rm --restart=Never -n ${TEST_NAMESPACE} -- curl -sf http://fer-service.${TEST_NAMESPACE}.svc.cluster.local:${API_PORT}/health"
                     echo "✅ Kubernetes testing completed"
                 }
             }
@@ -141,8 +141,8 @@ pipeline {
             steps {
                 script {
                     echo "🚀 Deploying to production namespace..."
-                    sh "docker exec jenkins-new kubectl apply -f k8s/ -n ${NAMESPACE}"
-                    sh "docker exec jenkins-new kubectl set image deployment/fer-service fer-service=${DOCKER_IMAGE}:${DOCKER_TAG} -n ${NAMESPACE}"
+                    sh "kubectl apply -f k8s/ -n ${NAMESPACE}"
+                    sh "kubectl set image deployment/fer-service fer-service=${DOCKER_IMAGE}:${DOCKER_TAG} -n ${NAMESPACE}"
                     echo "✅ Production deployment completed"
                 }
             }
@@ -153,9 +153,9 @@ pipeline {
             steps {
                 script {
                     echo "🔍 Verifying production deployment..."
-                    sh "docker exec jenkins-new kubectl rollout status deployment/fer-service -n ${NAMESPACE} --timeout=300s"
-                    sh "docker exec jenkins-new kubectl wait --for=condition=ready pod -l app=fer-service -n ${NAMESPACE} --timeout=300s"
-                    sh "docker exec jenkins-new kubectl run curl --image=curlimages/curl -i --rm --restart=Never -n ${NAMESPACE} -- curl -sf http://fer-service.${NAMESPACE}.svc.cluster.local:${API_PORT}/health"
+                    sh "kubectl rollout status deployment/fer-service -n ${NAMESPACE} --timeout=300s"
+                    sh "kubectl wait --for=condition=ready pod -l app=fer-service -n ${NAMESPACE} --timeout=300s"
+                    sh "kubectl run curl --image=curlimages/curl -i --rm --restart=Never -n ${NAMESPACE} -- curl -sf http://fer-service.${NAMESPACE}.svc.cluster.local:${API_PORT}/health"
                     echo "✅ Production verification completed"
                 }
             }
@@ -166,7 +166,7 @@ pipeline {
             steps {
                 script {
                     echo "🧹 Cleaning up test environment..."
-                    sh "docker exec jenkins-new kubectl delete ns ${TEST_NAMESPACE} --ignore-not-found=true"
+                    sh "kubectl delete ns ${TEST_NAMESPACE} --ignore-not-found=true"
                     echo "✅ Test environment cleanup completed"
                 }
             }
@@ -199,7 +199,7 @@ pipeline {
         cleanup {
             script {
                 echo "🧹 Running cleanup using host Docker..."
-                sh 'docker exec jenkins-new docker system prune -f || true'
+                sh 'docker system prune -f || true'
                 echo "✅ Cleanup completed using host Docker"
             }
         }
