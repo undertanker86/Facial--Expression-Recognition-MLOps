@@ -401,3 +401,5 @@ async def model_info():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)# Test comment for CI/CD trigger
+# Test change for CI/CD pipeline
+# CI/CD Pipeline Test - Fri Aug 29 12:42:22 PM +07 2025
