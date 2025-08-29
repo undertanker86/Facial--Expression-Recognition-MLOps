@@ -410,3 +410,4 @@ if __name__ == "__main__":
 # trigger pipeline 1756464571
 # trigger full pipeline 1756465162
 # trigger pipeline test 1756465355
+# test docker and kubectl access 1756472535
