@@ -403,3 +403,4 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)# Test comment for CI/CD trigger
 # Test change for CI/CD pipeline
 # CI/CD Pipeline Test - Fri Aug 29 12:42:22 PM +07 2025
+# Trigger new CI/CD pipeline - Fri Aug 29 12:50:35 PM +07 2025
