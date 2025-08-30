@@ -31,7 +31,7 @@ DEVICE = torch.device("cpu")
 # Initialize FastAPI app
 app = FastAPI(
     title="FER API - Facial Expression Recognition",
-    description="API for emotion detection using MobileFaceNet model",  # CHANGED description (touch to trigger CI/CD)
+    description="API for emotion detection using MobileFaceNet model - TRIGGER CI/CD PIPELINE",  # CHANGED: Trigger CI/CD
     version="1.0.0"
 )
 
