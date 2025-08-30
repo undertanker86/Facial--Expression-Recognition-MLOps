@@ -31,7 +31,7 @@ DEVICE = torch.device("cpu")
 # Initialize FastAPI app
 app = FastAPI(
     title="FER API - Facial Expression Recognition",
-    description="API for emotion detection using MobileFaceNet model - TRIGGER CI/CD PIPELINE TEST - FINAL TEST",  # CHANGED: Final test, trigger pipeline
+    description="API for emotion detection using MobileFaceNet model - TRIGGER CI/CD PIPELINE TEST - ALL DEPENDENCIES INSTALLED",  # CHANGED: All dependencies installed, test pipeline
     version="1.0.0"
 )
 
@@ -44,39 +44,48 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Setup OpenTelemetry tracing with resource attributes
-resource = Resource.create({
-    "service.name": os.getenv('OTEL_SERVICE_NAME', 'fer-service'),
-    "service.version": os.getenv('OTEL_SERVICE_VERSION', '1.0.0'),
-    "deployment.environment": os.getenv('OTEL_DEPLOYMENT_ENVIRONMENT', 'production')
-})
+# Setup OpenTelemetry tracing with resource attributes (if available)
+if OPENTELEMETRY_AVAILABLE:
+    try:
+        resource = Resource.create({
+            "service.name": os.getenv('OTEL_SERVICE_NAME', 'fer-service'),
+            "service.version": os.getenv('OTEL_SERVICE_VERSION', '1.0.0'),
+            "deployment.environment": os.getenv('OTEL_DEPLOYMENT_ENVIRONMENT', 'production')
+        })
 
-# Setup TracerProvider with resource
-trace.set_tracer_provider(TracerProvider(resource=resource))
+        # Setup TracerProvider with resource
+        trace.set_tracer_provider(TracerProvider(resource=resource))
 
-# Use OTLP exporter instead of Jaeger exporter
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-otlp_exporter = OTLPSpanExporter(
-    endpoint=os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://jaeger:4318/v1/traces')
-)
+        # Use OTLP exporter instead of Jaeger exporter
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        otlp_exporter = OTLPSpanExporter(
+            endpoint=os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://jaeger:4318/v1/traces')
+        )
 
-trace.get_tracer_provider().add_span_processor(
-    BatchSpanProcessor(otlp_exporter)
-)
+        trace.get_tracer_provider().add_span_processor(
+            BatchSpanProcessor(otlp_exporter)
+        )
 
-# Setup MeterProvider for metrics
-metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter())
-metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[metric_reader]))
+        # Setup MeterProvider for metrics
+        metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter())
+        metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[metric_reader]))
 
-# Get tracer and meter
-tracer = trace.get_tracer(__name__)
-meter = metrics.get_meter(__name__)
+        # Get tracer and meter
+        tracer = trace.get_tracer(__name__)
+        meter = metrics.get_meter(__name__)
 
-# Instrument FastAPI with OpenTelemetry
-FastAPIInstrumentor.instrument_app(app)
+        # Instrument FastAPI with OpenTelemetry
+        FastAPIInstrumentor.instrument_app(app)
 
-# Instrument system metrics (without psutil)
-SystemMetricsInstrumentor().instrument()
+        # Instrument system metrics (without psutil)
+        SystemMetricsInstrumentor().instrument()
+    except Exception as e:
+        print(f"Warning: OpenTelemetry setup failed: {e}")
+        OPENTELEMETRY_AVAILABLE = False
+else:
+    # Create dummy tracer and meter if OpenTelemetry not available
+    tracer = None
+    meter = None
 
 # Prometheus metrics
 REQUEST_COUNT = Counter('fer_api_requests_total', 'Total requests to FER API', ['method', 'endpoint', 'status'])

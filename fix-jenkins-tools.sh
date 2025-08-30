@@ -24,7 +24,9 @@ docker exec --user root jenkins-new apt-get install -y \
     python3-torch \
     python3-httpx \
     python3-starlette \
-    python3-prometheus-client
+    python3-prometheus-client \
+    python3-opentelemetry-api \
+    python3-opentelemetry-sdk
 
 # Install Docker client properly
 echo "🐳 Installing Docker client..."
