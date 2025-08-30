@@ -40,10 +40,8 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 script {
-                    echo "📦 Installing Python dependencies..."
-                    sh 'python3 -m pip install -r requirements.txt || true'
-                    sh 'python3 -m pip install pytest pytest-cov requests || true'
-                    echo "✅ Dependencies installed successfully"
+                    echo "📦 Dependencies already installed via apt in Jenkins container"
+                    echo "✅ All required packages: numpy, opencv, pil, pytest, requests, fastapi, uvicorn, torch, httpx, starlette, prometheus-client"
                 }
             }
         }
@@ -71,8 +69,8 @@ pipeline {
                             sleep 2
                         done
                         echo "🧪 Running API tests..."
-                        cd ../tests
-                        python3 -m pytest test_api.py -v --maxfail=1 || true
+                        cd ..
+                        python3 -m pytest tests/test_api.py -v --maxfail=1 || true
                         echo "🛑 Stopping API service..."
                         kill $API_PID || true
                         sleep 2

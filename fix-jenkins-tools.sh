@@ -23,7 +23,8 @@ docker exec --user root jenkins-new apt-get install -y \
     python3-uvicorn \
     python3-torch \
     python3-httpx \
-    python3-starlette
+    python3-starlette \
+    python3-prometheus-client
 
 # Install Docker client properly
 echo "🐳 Installing Docker client..."
