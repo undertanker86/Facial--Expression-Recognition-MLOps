@@ -128,21 +128,21 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Large model files
-*.pth
-*.pt
-*.h5
-*.pkl
-*.onnx
-*.tflite
-*.tar
-*.rar
+# Large model files (keep essential models for container)
+# *.pth    # Commented out - needed for container
+# *.pt     # Commented out - needed for container
+# *.h5     # Commented out - needed for container
+# *.pkl    # Commented out - needed for container
+# *.onnx   # Commented out - needed for container
+# *.tflite # Commented out - needed for container
+# *.tar    # Commented out - needed for container
+# *.rar    # Commented out - needed for container
 
-# Specific model files
-model/Pretrained_EfficientFace.tar
-model/models.rar
-model/best_model_now.pth
-model/outputs/
+# Specific model files (keep essential models for container)
+# model/Pretrained_EfficientFace.tar  # Commented out - needed for container
+# model/models.rar                     # Commented out - needed for container
+# model/best_model_now.pth            # Commented out - needed for container
+model/outputs/                         # Keep outputs excluded
 
 # Documentation files (don't track until project is complete)
 *.md
