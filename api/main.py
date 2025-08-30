@@ -45,6 +45,7 @@ app.add_middleware(
 )
 
 # Setup OpenTelemetry tracing with resource attributes (if available)
+OPENTELEMETRY_AVAILABLE = True  # Always available since we import it directly
 if OPENTELEMETRY_AVAILABLE:
     try:
         resource = Resource.create({
