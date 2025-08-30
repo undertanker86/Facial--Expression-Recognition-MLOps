@@ -1,9 +1,0 @@
-{
-  "model_path": "model/test_model.pth",
-  "version": "1.0.2",
-  "description": "Test model update for CI/CD",
-  "updated_at": "2025-08-28T13:44:47.189558",
-  "file_size": 19,
-  "checksum": "24f522b8e9a18a7d071c0e82d6b950fd",
-  "training_data_version": "v1.0.0-2024-01-15"
-}

@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from efficientfacenet import EfficientFace
 from data_aug import FERPlusDataset
-from hybrid_model_manager import HybridModelManager
 BATCH_SIZE = 128
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 NUM_EPOCHS = 1
@@ -159,6 +158,54 @@ def count_parameters(model):
     print(f"Trainable parameters: {trainable_params:,}")
     print(f"Non-trainable parameters: {total_params - trainable_params:,}")
     print(f"Total parameters: {total_params:,}")
+
+# ----------------------
+# Model metadata helpers
+# ----------------------
+import json
+from datetime import datetime
+
+METADATA_PATH = "./model/model_metadata.json"
+
+def _read_metadata(path: str) -> dict:
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _bump_version(prev: str | None) -> str:
+    if not prev:
+        return "1.0.0"
+    try:
+        major, minor, patch = [int(x) for x in prev.split(".")]
+        return f"{major}.{minor}.{patch + 1}"
+    except Exception:
+        return prev
+
+def _write_metadata(
+    model_name: str,
+    model_path: str,
+    dataset_name: str,
+    test_accuracy: float | None,
+    notes: str = "",
+):
+    current = _read_metadata(METADATA_PATH)
+    version = _bump_version(current.get("version"))
+    payload = {
+        "model_name": model_name,
+        "model_path": model_path,
+        "dataset": dataset_name,
+        "version": version,
+        "test_accuracy": None if test_accuracy is None else round(float(test_accuracy), 4),
+        "updated_at": datetime.now().isoformat(),
+        "notes": notes,
+    }
+    os.makedirs(os.path.dirname(METADATA_PATH), exist_ok=True)
+    with open(METADATA_PATH, "w") as f:
+        json.dump(payload, f, indent=2)
+    print(f"Saved model metadata → {METADATA_PATH}: {payload}")
+    
 def efficient_face():
     model = EfficientFace([4, 8, 4], [29, 116, 232, 464, 1024]).to('cuda')
     return model
@@ -187,14 +234,13 @@ def main():
         NUM_EPOCHS,
         MODEL_SAVE_PATH
     )
-    
-    # Sau khi train xong và lưu model, cập nhật metadata và trigger CI/CD
-    print("\nUpdating model metadata and triggering CI/CD...")
-    model_manager = HybridModelManager()
-    model_manager.handle_model_update(
-        MODEL_SAVE_PATH, 
-        description="Model trained with new data, improved accuracy by 2%"
+    # Write/update model metadata after training (test accuracy not computed here)
+    _write_metadata(
+        model_name="EfficientFace",
+        model_path=MODEL_SAVE_PATH,
+        dataset_name=os.path.basename(DATA_PATH),
+        test_accuracy=None,
+        notes="trained - metadata updated",
     )
-
 if __name__ == "__main__":
     main()

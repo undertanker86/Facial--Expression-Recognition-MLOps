@@ -15,7 +15,7 @@ client = TestClient(app)
 def create_test_image():
     """Create a test image for testing"""
     # Create a simple test image
-    image_array = np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
+    image_array = np.random.randint(0, 255, (112, 112, 3), dtype=np.uint8)
     image = Image.fromarray(image_array)
     
     # Save to bytes
