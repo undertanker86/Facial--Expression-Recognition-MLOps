@@ -425,3 +425,4 @@ if __name__ == "__main__":
 # trigger: pipeline test 1756480278
 # test: dockerhub credentials ready 1756486024
 # test: dockerhub credentials updated 1756487054
+# Trigger full CI/CD pipeline
