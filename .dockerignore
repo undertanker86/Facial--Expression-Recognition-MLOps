@@ -9,12 +9,36 @@ __pycache__/
 *.pyd
 *.pkl
 
-# Data and models (optional: keep model if you must bake it)
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+
+# Data (keep models for container)
 /data/
 **/*.npz
 model/outputs/
-model/*.tar
-model/*.pth
+
+# Tests and docs
+/tests/
+README.md
+DEPLOYMENT_SUMMARY.md
+
+# Node/binaries/cache
+node_modules/
+*.log
+*.tmp
+.cache/
+
+# Docker and CI
+Dockerfile*
+Jenkinsfile
 
 # Tests and docs
 /tests/

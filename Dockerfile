@@ -45,7 +45,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY api/ ./api/
 COPY src/ ./src/
-# COPY model/ ./model/  # Commented out - model files excluded by .dockerignore
+COPY model/ ./model/
 
 # Set environment variables
 ENV PYTHONPATH=/app
