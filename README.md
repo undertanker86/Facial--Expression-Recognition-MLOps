@@ -1,4 +1,4 @@
-# Facial Emotion Recognition (FER) - MLOps Project
+# Facial Emotion Recognition (FER) - MLOps Project - Lightweight models
 
 A comprehensive MLOps pipeline for real-time facial emotion recognition using deep learning, containerized with Docker, deployed on Kubernetes, and automated with Jenkins CI/CD.
 
@@ -191,7 +191,9 @@ kubectl apply -f k8s/monitoring-ingress.yaml
 
 ```bash
 # Get the external IP
-minikube tunnel
+sudo -E minikube tunnel --profile=minikube
+# Change nginx Controller to Loadbalancer
+kubectl patch svc ingress-nginx-controller -n ingress-nginx -p '{"spec":{"type":"LoadBalancer"}}'
 
 # Add to /etc/hosts
 echo "127.0.0.1 fer.local" | sudo tee -a /etc/hosts
@@ -426,7 +428,7 @@ with open("face.jpg", "rb") as f:
     print(f"Emotion: {result['emotion']}, Confidence: {result['confidence']}")
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -476,13 +478,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Kubernetes community for container orchestration
 - OpenTelemetry project for observability tools
 
-## 📞 Support
-
-For support and questions:
-- Create an issue in the GitHub repository
-- Check the troubleshooting section
-- Review the API documentation
 
 ---
 
-**Happy Coding! 🚀**
+**Duong aka 8668! 🚀**
