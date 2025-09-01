@@ -189,7 +189,7 @@ def load_model():
             
             print(f"Model loaded successfully from {model_path} on {DEVICE}")
             return True
-            # New trigger for CI/CD pipeline - Build: ${BUILD_NUMBER}
+            # CI/CD pipeline trigger - OpenCV dependencies fixed
         except Exception as e:
             span.set_attribute("error", True)
             span.set_attribute("error.message", str(e))
