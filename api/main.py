@@ -102,24 +102,30 @@ MODEL_PARAMETERS = Gauge('fer_model_parameters_total', 'Total number of model pa
 # Initialize MODEL_PARAMETERS to 0
 MODEL_PARAMETERS.set(0)
 
-# OpenTelemetry metrics
-request_counter = meter.create_counter(
-    name="fer_requests_total",
-    description="Total number of requests",
-    unit="1"
-)
+# OpenTelemetry metrics (only if meter is available)
+if meter is not None:
+    request_counter = meter.create_counter(
+        name="fer_requests_total",
+        description="Total number of requests",
+        unit="1"
+    )
 
-request_duration = meter.create_histogram(
-    name="fer_request_duration",
-    description="Request duration",
-    unit="ms"
-)
+    request_duration = meter.create_histogram(
+        name="fer_request_duration",
+        description="Request duration",
+        unit="ms"
+    )
 
-prediction_counter = meter.create_counter(
-    name="fer_predictions_total", 
-    description="Total number of predictions",
-    unit="1"
-)
+    prediction_counter = meter.create_counter(
+        name="fer_predictions_total", 
+        description="Total number of predictions",
+        unit="1"
+    )
+else:
+    # Dummy metrics if OpenTelemetry is not available
+    request_counter = None
+    request_duration = None
+    prediction_counter = None
 
 # Emotion mapping
 EMOTION_MAPPING = {
@@ -341,9 +347,12 @@ async def predict_emotion(request: Request, file: UploadFile = File(...)):
             MODEL_CONFIDENCE.labels(emotion=emotion).observe(confidence)
             
             # OpenTelemetry metrics
-            request_counter.add(1, {"method": "POST", "endpoint": "/predict", "status": "200"})
-            request_duration.record(total_time * 1000, {"method": "POST", "endpoint": "/predict"})
-            prediction_counter.add(1, {"emotion": emotion, "status": "success"})
+            if request_counter is not None:
+                request_counter.add(1, {"method": "POST", "endpoint": "/predict", "status": "200"})
+            if request_duration is not None:
+                request_duration.record(total_time * 1000, {"method": "POST", "endpoint": "/predict"})
+            if prediction_counter is not None:
+                prediction_counter.add(1, {"emotion": emotion, "status": "success"})
             
             # Decrement active requests
             ACTIVE_REQUESTS.dec()
@@ -365,9 +374,12 @@ async def predict_emotion(request: Request, file: UploadFile = File(...)):
             PREDICTION_COUNT.labels(emotion="error", status="failed").inc()
             
             # OpenTelemetry metrics
-            request_counter.add(1, {"method": "POST", "endpoint": "/predict", "status": "500"})
-            request_duration.record(total_time * 1000, {"method": "POST", "endpoint": "/predict"})
-            prediction_counter.add(1, {"emotion": "error", "status": "failed"})
+            if request_counter is not None:
+                request_counter.add(1, {"method": "POST", "endpoint": "/predict", "status": "500"})
+            if request_duration is not None:
+                request_duration.record(total_time * 1000, {"method": "POST", "endpoint": "/predict"})
+            if prediction_counter is not None:
+                prediction_counter.add(1, {"emotion": "error", "status": "failed"})
             
             # Decrement active requests
             ACTIVE_REQUESTS.dec()
