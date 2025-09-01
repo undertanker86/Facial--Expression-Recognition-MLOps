@@ -144,8 +144,7 @@ dmypy.json
 # model/best_model_now.pth            # Commented out - needed for container
 model/outputs/                         # Keep outputs excluded
 
-# Documentation files (don't track until project is complete)
-*.md
+
 
 # IDE files
 .vscode/
@@ -167,3 +166,14 @@ tmp/
 temp/
 *.tmp
 # Trigger CI/CD pipeline
+
+# Jenkins setup files (development only - hidden from GitHub)
+setup-jenkins-container.sh
+setup-jenkins-environment.sh
+fix-jenkins-tools.sh
+cloudflared.deb
+*.deb
+
+# Jupyter notebooks (development only)
+jpt/
+*.ipynb
