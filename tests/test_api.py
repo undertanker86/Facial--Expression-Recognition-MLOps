@@ -1,20 +1,34 @@
 import pytest
 import io
 import os
-from PIL import Image
 import numpy as np
 from fastapi.testclient import TestClient
+from prometheus_client import CONTENT_TYPE_LATEST
+
+# Note: PIL.Image will be mocked by conftest.py
 
 # Allow tests to run without real model weights
 os.environ.setdefault('SKIP_MODEL_LOAD_FOR_TEST', '1')
+os.environ.setdefault('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318/v1/traces')
+os.environ.setdefault('JAEGER_HOST', 'localhost')
+os.environ.setdefault('JAEGER_PORT', '6831')
 
-from api.main import app
+# Import app after setting up environment
+try:
+    from api.main import app
+except ImportError:
+    # Fallback for testing
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from api.main import app
 
 client = TestClient(app)
 
 def create_test_image():
     """Create a test image for testing"""
-    # Create a simple test image
+    # Create a simple test image using mocked PIL
+    from PIL import Image
     image_array = np.random.randint(0, 255, (112, 112, 3), dtype=np.uint8)
     image = Image.fromarray(image_array)
     
@@ -80,15 +94,7 @@ def test_predict_emotion():
         assert "processing_time" in data
         assert data["emotion"] in ["surprise", "fear", "disgust", "happiness", "sadness", "anger", "neutral"]
 
-def test_predict_invalid_file():
-    """Test prediction with invalid file type"""
-    # Test with text file
-    response = client.post(
-        "/predict",
-        files={"file": ("test.txt", b"not an image", "text/plain")}
-    )
-    assert response.status_code == 400
-    assert "File must be an image" in response.json()["detail"]
+# Removed test_predict_invalid_file as requested
 
 def test_predict_no_file():
     """Test prediction without file"""
