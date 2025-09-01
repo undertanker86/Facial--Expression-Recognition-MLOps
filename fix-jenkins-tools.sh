@@ -1,4 +1,4 @@
-#!/bin/bash
+'t #!/bin/bash
 
 echo "🔧 Quick fix for Jenkins tools..."
 
@@ -10,23 +10,54 @@ fi
 
 echo "✅ Jenkins container is running"
 
-# Install Python packages using apt (system packages)
-echo "🐍 Installing Python packages via apt..."
+# Install system dependencies for OpenCV and other packages
+echo "🔧 Installing system dependencies..."
 docker exec --user root jenkins-new apt-get update
 docker exec --user root jenkins-new apt-get install -y \
-    python3-numpy \
-    python3-opencv \
-    python3-pil \
-    python3-pytest \
-    python3-requests \
-    python3-fastapi \
-    python3-uvicorn \
-    python3-torch \
-    python3-httpx \
-    python3-starlette \
-    python3-prometheus-client \
-    python3-opentelemetry-api \
-    python3-opentelemetry-sdk
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    python3-pip \
+    python3-dev \
+    build-essential \
+    pkg-config \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libxvidcore-dev \
+    libx264-dev \
+    libgtk-3-dev \
+    libatlas-base-dev \
+    gfortran
+
+# Install Python packages using pip
+echo "🐍 Installing Python packages via pip..."
+docker exec --user root jenkins-new python3 -m pip install --no-cache-dir --upgrade pip --break-system-packages
+docker exec --user root jenkins-new python3 -m pip install --no-cache-dir --break-system-packages \
+    numpy \
+    opencv-python \
+    pillow \
+    pytest \
+    pytest-cov \
+    requests \
+    fastapi \
+    uvicorn \
+    torch \
+    torchvision \
+    httpx \
+    starlette \
+    prometheus-client \
+    opentelemetry-api \
+    opentelemetry-sdk \
+    opentelemetry-instrumentation-fastapi \
+    opentelemetry-exporter-jaeger
 
 # Install Docker client properly
 echo "🐳 Installing Docker client..."
@@ -50,7 +81,10 @@ sleep 15
 echo "🧪 Testing installations..."
 echo "Python3: $(docker exec jenkins-new python3 --version)"
 echo "Numpy: $(docker exec jenkins-new python3 -c 'import numpy; print("✅ Numpy installed")' 2>/dev/null || echo "❌ Numpy not found")"
+echo "OpenCV: $(docker exec jenkins-new python3 -c 'import cv2; print("✅ OpenCV installed")' 2>/dev/null || echo "❌ OpenCV not found")"
 echo "Torch: $(docker exec jenkins-new python3 -c 'import torch; print("✅ Torch installed")' 2>/dev/null || echo "❌ Torch not found")"
+echo "FastAPI: $(docker exec jenkins-new python3 -c 'import fastapi; print("✅ FastAPI installed")' 2>/dev/null || echo "❌ FastAPI not found")"
+echo "Pytest: $(docker exec jenkins-new python3 -c 'import pytest; print("✅ Pytest installed")' 2>/dev/null || echo "❌ Pytest not found")"
 echo "Httpx: $(docker exec jenkins-new python3 -c 'import httpx; print("✅ Httpx installed")' 2>/dev/null || echo "❌ Httpx not found")"
 echo "Docker: $(docker exec jenkins-new docker --version 2>/dev/null || echo "❌ Docker not found")"
 

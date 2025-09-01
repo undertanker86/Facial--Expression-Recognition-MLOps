@@ -53,12 +53,52 @@ docker exec --user root "${CONTAINER_NAME}" apt-get install -y \
   python3 python3-pip python3-venv \
   curl wget git vim unzip
 
-echo "🐍 Installing Python packages inside container..."
+echo "🔧 Installing comprehensive system dependencies for FER project..."
+docker exec --user root "${CONTAINER_NAME}" apt-get update
+docker exec --user root "${CONTAINER_NAME}" apt-get install -y \
+  libgl1-mesa-glx \
+  libglib2.0-0 \
+  libsm6 \
+  libxext6 \
+  libxrender-dev \
+  libgomp1 \
+  python3-pip \
+  python3-dev \
+  build-essential \
+  pkg-config \
+  libjpeg-dev \
+  libpng-dev \
+  libtiff-dev \
+  libavcodec-dev \
+  libavformat-dev \
+  libswscale-dev \
+  libv4l-dev \
+  libxvidcore-dev \
+  libx264-dev \
+  libgtk-3-dev \
+  libatlas-base-dev \
+  gfortran
+
+echo "🐍 Installing comprehensive Python packages..."
 docker exec --user root "${CONTAINER_NAME}" python3 -m pip install --no-cache-dir --upgrade pip --break-system-packages
 docker exec --user root "${CONTAINER_NAME}" python3 -m pip install --no-cache-dir --break-system-packages \
-  pytest pytest-cov requests fastapi uvicorn \
-  torch torchvision opencv-python pillow numpy \
-  httpx starlette prometheus-client
+  numpy \
+  opencv-python \
+  pillow \
+  pytest \
+  pytest-cov \
+  requests \
+  fastapi \
+  uvicorn \
+  torch \
+  torchvision \
+  httpx \
+  starlette \
+  prometheus-client \
+  opentelemetry-api \
+  opentelemetry-sdk \
+  opentelemetry-instrumentation-fastapi \
+  opentelemetry-exporter-jaeger
 
 # ------------------------------
 # Docker client inside container
@@ -135,6 +175,16 @@ if __name__ == "__main__":
 PYEOF'
 
 docker exec "${CONTAINER_NAME}" python3 /var/jenkins_home/test_setup.py || true
+
+echo "🧪 Testing comprehensive package installations..."
+echo "Python3: $(docker exec "${CONTAINER_NAME}" python3 --version)"
+echo "Numpy: $(docker exec "${CONTAINER_NAME}" python3 -c 'import numpy; print("✅ Numpy installed")' 2>/dev/null || echo "❌ Numpy not found")"
+echo "OpenCV: $(docker exec "${CONTAINER_NAME}" python3 -c 'import cv2; print("✅ OpenCV installed")' 2>/dev/null || echo "❌ OpenCV not found")"
+echo "Torch: $(docker exec "${CONTAINER_NAME}" python3 -c 'import torch; print("✅ Torch installed")' 2>/dev/null || echo "❌ Torch not found")"
+echo "FastAPI: $(docker exec "${CONTAINER_NAME}" python3 -c 'import fastapi; print("✅ FastAPI installed")' 2>/dev/null || echo "❌ FastAPI not found")"
+echo "Pytest: $(docker exec "${CONTAINER_NAME}" python3 -c 'import pytest; print("✅ Pytest installed")' 2>/dev/null || echo "❌ Pytest not found")"
+echo "Httpx: $(docker exec "${CONTAINER_NAME}" python3 -c 'import httpx; print("✅ Httpx installed")' 2>/dev/null || echo "❌ Httpx not found")"
+echo "Docker: $(docker exec "${CONTAINER_NAME}" docker --version 2>/dev/null || echo "❌ Docker not found")"
 
 cat <<SUMMARY
 
